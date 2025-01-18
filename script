@@ -1,0 +1,108 @@
+// Завантаження даних користувача
+let investment = parseFloat(localStorage.getItem("userInvestment")) || 1.00;
+let income = parseFloat(localStorage.getItem("userIncome")) || 0.000000;
+let userCount = parseInt(localStorage.getItem("userCount")) || 1;
+let projectBalance = parseFloat(localStorage.getItem("projectBalance")) || investment;
+let projectStartDate = localStorage.getItem("projectStartDate") || new Date().toISOString().split('T')[0];
+
+// Оновлення відображення балансу та статистики
+document.getElementById("user-investment").textContent = investment.toFixed(2);
+document.getElementById("user-income").textContent = income.toFixed(6);
+document.getElementById("user-count").textContent = userCount;
+document.getElementById("project-balance").textContent = projectBalance.toFixed(2);
+document.getElementById("days-running").textContent = calculateProjectDays();
+
+// Функція підрахунку днів проєкту
+function calculateProjectDays() {
+    let startDate = new Date(projectStartDate);
+    let today = new Date();
+    return Math.floor((today - startDate) / (1000 * 60 * 60 * 24));
+}
+
+// Дані для гаманців
+const wallets = {
+    "payeer": "P1085113740",
+    "usdt": "TPc6Nzmnd5cJFwW2k32vB5g7kPkMMvP4BU"
+};
+
+// Депозит: відкриття модального вікна
+document.getElementById("deposit-button").addEventListener("click", () => {
+    document.getElementById("deposit-modal").classList.remove("hidden");
+    updateWalletInfo();
+});
+
+// Оновлення адреси гаманця в залежності від вибору
+document.getElementById("deposit-method").addEventListener("change", updateWalletInfo);
+
+function updateWalletInfo() {
+    let method = document.getElementById("deposit-method").value;
+    document.getElementById("wallet-info").innerHTML = `Відправте кошти на: <b>${wallets[method]}</b>`;
+}
+
+// Підтвердження депозиту
+document.getElementById("confirm-deposit").addEventListener("click", () => {
+    let amount = parseFloat(document.getElementById("deposit-amount").value);
+    if (isNaN(amount) || amount <= 0) {
+        alert("Введіть коректну суму!");
+        return;
+    }
+    alert(`Заявка на депозит ${amount.toFixed(2)}$ відправлена! Очікуйте підтвердження.`);
+    document.getElementById("deposit-modal").classList.add("hidden");
+});
+
+document.getElementById("close-deposit").addEventListener("click", () => {
+    document.getElementById("deposit-modal").classList.add("hidden");
+});
+
+// Вивід коштів: відкриття модального вікна
+document.getElementById("withdraw-button").addEventListener("click", () => {
+    document.getElementById("withdraw-modal").classList.remove("hidden");
+});
+
+// Підтвердження виводу
+document.getElementById("confirm-withdraw").addEventListener("click", () => {
+    let amount = parseFloat(document.getElementById("withdraw-amount").value);
+    let wallet = document.getElementById("wallet-address").value;
+    if (isNaN(amount) || amount < 1 || amount > income || wallet.trim() === "") {
+        alert("Мінімальна сума для виведення - 1$. Недостатньо коштів або не вказаний гаманець!");
+        return;
+    }
+    alert(`Запит на виведення ${amount.toFixed(2)}$ на гаманець ${wallet} створено! Очікуйте підтвердження.`);
+    document.getElementById("withdraw-modal").classList.add("hidden");
+});
+
+document.getElementById("close-withdraw").addEventListener("click", () => {
+    document.getElementById("withdraw-modal").classList.add("hidden");
+});
+
+// Реінвестування
+document.getElementById("reinvest-button").addEventListener("click", () => {
+    if (income < 0.10) {
+        alert("Мінімальна сума для реінвестування - 0.10$!");
+        return;
+    }
+    investment += income;
+    income = 0.000000;
+    document.getElementById("user-investment").textContent = investment.toFixed(2);
+    document.getElementById("user-income").textContent = income.toFixed(6);
+    alert("Реінвестування успішне!");
+});
+
+// Автоматичний дохід
+setInterval(() => {
+    income += investment * 0.02 / 86400;
+    document.getElementById("user-income").textContent = income.toFixed(6);
+}, 1000);
+
+// Калькулятор доходу
+document.getElementById("calc-amount").addEventListener("input", () => {
+    const amount = parseFloat(document.getElementById("calc-amount").value) || 0;
+    document.getElementById("daily-income").textContent = (amount * 0.02).toFixed(6);
+    document.getElementById("weekly-income").textContent = (amount * 0.14).toFixed(6);
+    document.getElementById("monthly-income").textContent = (amount * 0.60).toFixed(6);
+});
+
+// Telegram
+document.getElementById("telegram-button").addEventListener("click", () => {
+    window.location.href = "https://t.me/FastCashing12";
+});
