@@ -1,0 +1,189 @@
+document.addEventListener("DOMContentLoaded", () => {
+    let userEmail = localStorage.getItem("userEmail");
+
+    if (userEmail) {
+        document.getElementById("registration-container").classList.add("hidden");
+        document.getElementById("dashboard").classList.remove("hidden");
+        loadUserData();
+    }
+});
+
+// **Реєстрація користувача**
+document.getElementById("register-button").addEventListener("click", () => {
+    let email = document.getElementById("email").value;
+    let password = document.getElementById("password").value;
+
+    if (!email || !password) {
+        alert("Заповніть всі поля!");
+        return;
+    }
+
+    let userId = "ID-" + Math.floor(Math.random() * 1000000);
+    localStorage.setItem("userEmail", email);
+    localStorage.setItem("userPassword", password);
+    localStorage.setItem("userId", userId);
+    localStorage.setItem("userInvestment", "3.00");
+    localStorage.setItem("userIncome", "0.000000");
+
+    document.getElementById("registration-container").classList.add("hidden");
+    document.getElementById("dashboard").classList.remove("hidden");
+    loadUserData();
+});
+
+// Завантаження збережених даних користувача
+let investment = parseFloat(localStorage.getItem("userInvestment")) || 3.00;
+let income = parseFloat(localStorage.getItem("userIncome")) || 0.000000;
+let referralCount = parseInt(localStorage.getItem("referralCount")) || 0;
+let referralIncome = parseFloat(localStorage.getItem("referralIncome")) || 0.00;
+let projectBalance = parseFloat(localStorage.getItem("projectBalance")) || investment;
+let userCount = parseInt(localStorage.getItem("userCount")) || 1;
+let projectStartDate = localStorage.getItem("projectStartDate") || new Date().toISOString().split('T')[0];
+
+// Оновлення відображення даних
+function updateUI() {
+    document.getElementById("user-investment").textContent = investment.toFixed(2);
+    document.getElementById("user-income").textContent = income.toFixed(6);
+    document.getElementById("referral-count").textContent = referralCount;
+    document.getElementById("referral-income").textContent = referralIncome.toFixed(2);
+    document.getElementById("project-balance").textContent = projectBalance.toFixed(2);
+    document.getElementById("user-count").textContent = userCount;
+    document.getElementById("days-running").textContent = calculateProjectDays();
+}
+updateUI();
+
+// Автоматичне збереження доходу після оновлення сторінки
+setInterval(() => {
+    income += investment * 0.02 / 86400;
+    localStorage.setItem("userIncome", income.toFixed(6));
+    document.getElementById("user-income").textContent = income.toFixed(6);
+}, 1000);
+
+// Розрахунок днів проєкту
+function calculateProjectDays() {
+    let startDate = new Date(projectStartDate);
+    let today = new Date();
+    return Math.floor((today - startDate) / (1000 * 60 * 60 * 24));
+}
+
+// Калькулятор доходу
+document.getElementById("calc-amount").addEventListener("input", () => {
+    const amount = parseFloat(document.getElementById("calc-amount").value) || 0;
+    document.getElementById("daily-income").textContent = (amount * 0.02).toFixed(6);
+    document.getElementById("weekly-income").textContent = (amount * 0.14).toFixed(6);
+    document.getElementById("monthly-income").textContent = (amount * 0.60).toFixed(6);
+});
+
+// Відкриття/закриття модального вікна депозиту
+document.getElementById("deposit-button").addEventListener("click", () => {
+    document.getElementById("deposit-modal").classList.remove("hidden");
+});
+document.getElementById("close-deposit").addEventListener("click", () => {
+    document.getElementById("deposit-modal").classList.add("hidden");
+});
+
+// Відкриття/закриття модального вікна виводу
+document.getElementById("withdraw-button").addEventListener("click", () => {
+    let today = new Date().getDay();
+    if (today !== 1 && today !== 5) {
+        alert("Вивід коштів доступний тільки в понеділок і п’ятницю!");
+        return;
+    }
+    document.getElementById("withdraw-modal").classList.remove("hidden");
+});
+document.getElementById("close-withdraw").addEventListener("click", () => {
+    document.getElementById("withdraw-modal").classList.add("hidden");
+});
+
+// **Реінвестування доходу**
+document.getElementById("reinvest-button").addEventListener("click", () => {
+    if (income < 0.10) {
+        alert("Мінімальна сума для реінвестування - 0.10$!");
+        return;
+    }
+    investment += income;
+    income = 0.000000;
+    localStorage.setItem("userInvestment", investment.toFixed(2));
+    localStorage.setItem("userIncome", income.toFixed(6));
+    updateUI();
+    alert("Реінвестування успішне!");
+});
+
+// **Гаманці для депозиту**
+const wallets = {
+    "payeer": "P1085113740",
+    "usdt": "TPc6Nzmnd5cJFwW2k32vB5g7kPkMMvP4BU"
+};
+
+// Оновлення інформації про гаманець у депозиті
+document.getElementById("deposit-method").addEventListener("change", () => {
+    let method = document.getElementById("deposit-method").value;
+    document.getElementById("wallet-info").innerHTML = `Відправте кошти на: <b>${wallets[method]}</b>`;
+});
+
+// **Бонусний код (генерується адміністратором)**
+let bonusCodes = JSON.parse(localStorage.getItem("bonusCodes")) || {}; // { "Cash23865": { amount: 0.07, remaining: 250 } }
+let usedBonusCodes = JSON.parse(localStorage.getItem("usedBonusCodes")) || [];
+
+document.getElementById("apply-bonus").addEventListener("click", () => {
+    let code = document.getElementById("bonus-code").value.trim();
+
+    if (!bonusCodes[code] || bonusCodes[code].remaining <= 0) {
+        alert("Неправильний або закінчився ліміт активацій!");
+        return;
+    }
+
+    if (usedBonusCodes.includes(code)) {
+        alert("Цей бонусний код вже використаний!");
+        return;
+    }
+
+    investment += bonusCodes[code].amount;
+    bonusCodes[code].remaining -= 1;
+    usedBonusCodes.push(code);
+
+    localStorage.setItem("userInvestment", investment.toFixed(2));
+    localStorage.setItem("bonusCodes", JSON.stringify(bonusCodes));
+    localStorage.setItem("usedBonusCodes", JSON.stringify(usedBonusCodes));
+
+    updateUI();
+    alert(`Бонус ${bonusCodes[code].amount.toFixed(2)}$ успішно активовано!`);
+});
+
+// **Адмін може створювати бонусний код**
+function addBonusCode(code, amount, maxActivations) {
+    bonusCodes[code] = { amount: amount, remaining: maxActivations };
+    localStorage.setItem("bonusCodes", JSON.stringify(bonusCodes));
+    alert(`Бонусний код ${code} додано з сумою ${amount}$ (Максимум ${maxActivations} активацій)!`);
+}
+
+// Telegram кнопка
+document.getElementById("telegram-button").addEventListener("click", () => {
+    window.location.href = "https://t.me/YOUR_TELEGRAM_GROUP";
+});
+
+// Генерація унікального реферального посилання
+let userId = localStorage.getItem("userId");
+if (!userId) {
+    userId = Math.floor(Math.random() * 1000000);
+    localStorage.setItem("userId", userId);
+}
+document.getElementById("referral-link").value = window.location.origin + "?ref=" + userId;
+
+// Запрошення рефералів
+const urlParams = new URLSearchParams(window.location.search);
+const referrerId = urlParams.get("ref");
+
+if (referrerId) {
+    let referredUsers = JSON.parse(localStorage.getItem(`referredUsers_${referrerId}`)) || [];
+    if (!referredUsers.includes(userId)) {
+        referredUsers.push(userId);
+        localStorage.setItem(`referredUsers_${referrerId}`, JSON.stringify(referredUsers));
+
+        let referrerIncome = parseFloat(localStorage.getItem(`referralIncome_${referrerId}`)) || 0;
+        referrerIncome += 0.10;
+        localStorage.setItem(`referralIncome_${referrerId}`, referrerIncome.toFixed(2));
+
+        referralCount++;
+        document.getElementById("referral-count").textContent = referralCount;
+    }
+}
